@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+
+import sys
+import argparse
+import gpxpy
+
+def rm_false_points(gpx_file):
+    with open(gpx_file, 'r') as gpx_obj:
+        gpx = gpxpy.parse(gpx_obj)
+        for track in gpx.tracks:
+            for segment in track.segments:
+                for point in segment.points:
+                    # WIP
+                    print(point.latitude, point.longitude, point.elevation)
+        output_f = open(gpx_file + '-out.gpx', 'w')
+        output_f.write(gpx.to_xml())
+
+def process_files(gpx_files):
+    if not gpx_files:
+        print('No GPX files specified')
+        return
+
+    for gpx_file in gpx_files:
+        try:
+            rm_false_points(gpx_file)
+        except Exception as e:
+            print('Error processing "%s":\n\t%s' % (gpx_file, e))
+            sys.exit(1)
+
+def make_parser():
+    parser = argparse.ArgumentParser(
+        usage='%(prog)s [file ...]',
+        description='Command line utility to remove false points from gpx file(s)')
+    return parser
+
+if __name__ == '__main__':
+    args, gpx_files = make_parser().parse_known_args()
+    process_files(gpx_files)
