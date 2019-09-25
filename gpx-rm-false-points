@@ -3,15 +3,33 @@
 import sys
 import argparse
 import gpxpy
+from geographiclib.geodesic import Geodesic as geodesic
+
+threshold_m = 10000
+
+class PointChecker(object):
+
+    def __init__(self):
+        self.previos_point = None
+
+    def check(self, point):
+        if self.previos_point is not None:
+            distance = geodesic.WGS84.Inverse(
+                point.latitude, point.longitude,
+                self.previos_point.latitude, self.previos_point.longitude,
+                outmask=geodesic.DISTANCE)['s12']
+            if distance > threshold_m:
+                return False
+        self.previos_point = point
+        return True
 
 def rm_false_points(gpx_file):
     with open(gpx_file, 'r') as gpx_obj:
         gpx = gpxpy.parse(gpx_obj)
         for track in gpx.tracks:
             for segment in track.segments:
-                for point in segment.points:
-                    # WIP
-                    print(point.latitude, point.longitude, point.elevation)
+                point_checker = PointChecker()
+                segment.points[:] = [p for p in segment.points if point_checker.check(p)]
         output_f = open(gpx_file + '-out.gpx', 'w')
         output_f.write(gpx.to_xml())
 
