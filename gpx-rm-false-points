@@ -49,7 +49,7 @@ def process_file(gpx_file, output_gpx_file, speed_threshold):
 
 def make_parser():
     parser = argparse.ArgumentParser(
-        description='Command line utility to remove false points from gpx file',
+        description='Command line utility to remove false points from gpx file.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-o', '--output', default='output.gpx',
         help='output gpx filename')
