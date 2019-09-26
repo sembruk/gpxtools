@@ -5,12 +5,11 @@ import argparse
 import gpxpy
 from geographiclib.geodesic import Geodesic as geodesic
 
-threshold_kmph = 80
-
 class PointChecker(object):
 
-    def __init__(self):
+    def __init__(self, speed_threshold):
         self.previos_point = None
+        self.speed_threshold = speed_threshold
 
     def check(self, point):
         if self.previos_point is not None:
@@ -20,41 +19,46 @@ class PointChecker(object):
                 outmask=geodesic.DISTANCE)['s12']
             dt_h = (point.time - self.previos_point.time).total_seconds()/3600.0
             speed = distance_m/dt_h/1000
-            if speed > threshold_kmph:
+            if speed > self.speed_threshold:
                 print('Remove point at %s, speed %.1f km/h' % (point.time, speed))
                 return False
         self.previos_point = point
         return True
 
-def rm_false_points(gpx_file, output_gpx_file):
+def rm_false_points(gpx_file, output_gpx_file, speed_threshold):
     with open(gpx_file, 'r') as gpx_obj:
         gpx = gpxpy.parse(gpx_obj)
         for track in gpx.tracks:
             for segment in track.segments:
-                point_checker = PointChecker()
+                point_checker = PointChecker(speed_threshold)
                 segment.points[:] = [p for p in segment.points if point_checker.check(p)]
         output_f = open(output_gpx_file, 'w')
         output_f.write(gpx.to_xml())
         print('File "%s" saved.' % output_gpx_file)
 
-def process_file(gpx_file, output_gpx_file):
+def process_file(gpx_file, output_gpx_file, speed_threshold):
     if not gpx_file:
         print('No GPX file specified')
         return
 
     try:
-        rm_false_points(gpx_file, output_gpx_file)
+        rm_false_points(gpx_file, output_gpx_file, speed_threshold)
     except Exception as e:
         print('Error processing "%s":\n\t%s' % (gpx_file, e))
         sys.exit(1)
 
 def make_parser():
     parser = argparse.ArgumentParser(
-        usage='%(prog)s [file]',
-        description='Command line utility to remove false points from gpx file')
+        description='Command line utility to remove false points from gpx file',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-o', '--output', default='output.gpx',
+        help='output gpx filename')
+    parser.add_argument('-s', '--speed-threshold', type=int, default=100,
+        help='speed threshold (km/h)')
+    parser.add_argument('file', help='gpx file')
     return parser
 
 if __name__ == '__main__':
     args, gpx_files = make_parser().parse_known_args()
-    process_file(gpx_files[0], 'output.gpx')
+    process_file(args.file, args.output, args.speed_threshold)
 
